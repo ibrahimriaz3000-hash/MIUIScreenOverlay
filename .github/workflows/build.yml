@@ -1,0 +1,41 @@
+name: build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip project
+        run: |
+          rm -rf _proj
+          mkdir _proj
+          unzip -q -o *.zip -d _proj
+          # agar zip ke andar ek extra folder ho to usay upar le aao
+          if [ ! -f _proj/settings.gradle ]; then
+            SUB=$(dirname "$(find _proj -maxdepth 3 -name settings.gradle | head -n 1)")
+            mv "$SUB"/* _proj/ 2>/dev/null || true
+          fi
+          ls -la _proj
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+
+      - name: Build debug APK
+        working-directory: _proj
+        run: gradle assembleDebug --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DynamicPill-debug
+          path: _proj/app/build/outputs/apk/debug/*.apk
